@@ -168,7 +168,7 @@ def evaluate(data_source, batch_size=10):
     return total_loss.item() / len(data_source)
 
 
-def train(idx_bptt):
+def train():
     # Turn on training mode which enables dropout.
     if args.model == 'QRNN': model.reset()
     total_loss = 0
@@ -177,11 +177,11 @@ def train(idx_bptt):
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
     while i < train_data.size(0) - 1 - 1:
-        bptt = idx_bptt if np.random.random() < 0.95 else idx_bptt / 2.
+        bptt = args.bptt if np.random.random() < 0.95 else args.bptt / 2.
         # Prevent excessively small or negative sequence lengths
         seq_len = max(5, int(np.random.normal(bptt, 5)))
         # There's a very small chance that it could select a very long sequence length resulting in OOM
-        # seq_len = min(seq_len, idx_bptt + 10)
+        # seq_len = min(seq_len, args.bptt + 10)
 
         lr2 = optimizer.param_groups[0]['lr']
         optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
@@ -222,6 +222,61 @@ def train(idx_bptt):
         batch += 1
         i += seq_len
 
+def train_curr():
+    # Turn on training mode which enables dropout.
+    if args.model == 'QRNN': model.reset()
+    total_loss = 0
+    start_time = time.time()
+    ntokens = len(corpus.dictionary)
+    hidden = model.init_hidden(args.batch_size)
+    batch, i = 0, 0
+    while i < train_data.size(0) - 1 - 1:
+        bptt = args.bptt if np.random.random() < 0.95 else args.bptt / 2.
+        # Prevent excessively small or negative sequence lengths
+        seq_len = max(5, int(np.random.normal(bptt, 5)))
+        # There's a very small chance that it could select a very long sequence length resulting in OOM
+        # seq_len = min(seq_len, args.bptt + 10)
+
+        lr2 = optimizer.param_groups[0]['lr']
+        optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
+        model.train()
+        data, targets = get_batch(train_data, i, args, seq_len=seq_len)
+
+        # Starting each batch, we detach the hidden state from how it was previously produced.
+        # If we didn't, the model would try backpropagating all the way to start of the dataset.
+        hidden = repackage_hidden(hidden)
+        optimizer.zero_grad()
+
+        output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
+        raw_loss = criterion(model.decoder.weight, model.decoder.bias, output, targets)
+
+        loss = raw_loss
+        # Activiation Regularization
+        if args.alpha: loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
+        # Temporal Activation Regularization (slowness)
+        if args.beta: loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
+        loss.backward()
+
+        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+        if args.clip: torch.nn.utils.clip_grad_norm_(params, args.clip)
+        optimizer.step()
+
+        total_loss += raw_loss.data
+        optimizer.param_groups[0]['lr'] = lr2
+        if batch % args.log_interval == 0 and batch > 0:
+            cur_loss = total_loss.item() / args.log_interval
+            elapsed = time.time() - start_time
+            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:05.5f} | ms/batch {:5.2f} | '
+                    'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
+                epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
+                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
+            total_loss = 0
+            start_time = time.time()
+        ###
+        batch += 1
+        i += seq_len
+        
+
 # Loop over epochs.
 lr = args.lr
 best_val_loss = []
@@ -235,60 +290,54 @@ try:
         optimizer = torch.optim.SGD(params, lr=args.lr, weight_decay=args.wdecay)
     if args.optimizer == 'adam':
         optimizer = torch.optim.Adam(params, lr=args.lr, weight_decay=args.wdecay)
-    idx_bptt = 0
-    while idx_bptt < args.bptt:
-        print('BPTT length = ' + str(idx_bptt))
-        idx_bptt = idx_bptt + 5
-        if (idx_bptt > args.bptt):
-            idx_bptt = args.bptt
-        for epoch in range(1, args.epochs+1):
-            epoch_start_time = time.time()
-            train(idx_bptt)
-            if 't0' in optimizer.param_groups[0]:
-                tmp = {}
-                for prm in model.parameters():
-                    tmp[prm] = prm.data.clone()
-                    prm.data = optimizer.state[prm]['ax'].clone()
-    
-                val_loss2 = evaluate(val_data)
-                print('-' * 89)
-                print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                    'valid ppl {:8.2f} | valid bpc {:8.3f}'.format(
-                        epoch, (time.time() - epoch_start_time), val_loss2, math.exp(val_loss2), val_loss2 / math.log(2)))
-                print('-' * 89)
-    
-                if val_loss2 < stored_loss:
-                    model_save(args.save)
-                    print('Saving Averaged!')
-                    stored_loss = val_loss2
-    
-                for prm in model.parameters():
-                    prm.data = tmp[prm].clone()
-    
-            else:
-                val_loss = evaluate(val_data, eval_batch_size)
-                print('-' * 89)
-                print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                    'valid ppl {:8.2f} | valid bpc {:8.3f}'.format(
-                  epoch, (time.time() - epoch_start_time), val_loss, math.exp(val_loss), val_loss / math.log(2)))
-                print('-' * 89)
-    
-                if val_loss < stored_loss:
-                    model_save(args.save)
-                    print('Saving model (new best validation)')
-                    stored_loss = val_loss
-    
-                if args.optimizer == 'sgd' and 't0' not in optimizer.param_groups[0] and (len(best_val_loss)>args.nonmono and val_loss > min(best_val_loss[:-args.nonmono])):
-                    print('Switching to ASGD')
-                    optimizer = torch.optim.ASGD(model.parameters(), lr=args.lr, t0=0, lambd=0., weight_decay=args.wdecay)
-    
-                if epoch in args.when:
-                    print('Saving model before learning rate decreased')
-                    model_save('{}.e{}'.format(args.save, epoch))
-                    print('Dividing learning rate by 10')
-                    optimizer.param_groups[0]['lr'] /= 10.
-    
-                best_val_loss.append(val_loss)
+    for epoch in range(1, args.epochs+1):
+        epoch_start_time = time.time()
+        train()
+        if 't0' in optimizer.param_groups[0]:
+            tmp = {}
+            for prm in model.parameters():
+                tmp[prm] = prm.data.clone()
+                prm.data = optimizer.state[prm]['ax'].clone()
+
+            val_loss2 = evaluate(val_data)
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+                'valid ppl {:8.2f} | valid bpc {:8.3f}'.format(
+                    epoch, (time.time() - epoch_start_time), val_loss2, math.exp(val_loss2), val_loss2 / math.log(2)))
+            print('-' * 89)
+
+            if val_loss2 < stored_loss:
+                model_save(args.save)
+                print('Saving Averaged!')
+                stored_loss = val_loss2
+
+            for prm in model.parameters():
+                prm.data = tmp[prm].clone()
+
+        else:
+            val_loss = evaluate(val_data, eval_batch_size)
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+                'valid ppl {:8.2f} | valid bpc {:8.3f}'.format(
+              epoch, (time.time() - epoch_start_time), val_loss, math.exp(val_loss), val_loss / math.log(2)))
+            print('-' * 89)
+
+            if val_loss < stored_loss:
+                model_save(args.save)
+                print('Saving model (new best validation)')
+                stored_loss = val_loss
+
+            if args.optimizer == 'sgd' and 't0' not in optimizer.param_groups[0] and (len(best_val_loss)>args.nonmono and val_loss > min(best_val_loss[:-args.nonmono])):
+                print('Switching to ASGD')
+                optimizer = torch.optim.ASGD(model.parameters(), lr=args.lr, t0=0, lambd=0., weight_decay=args.wdecay)
+
+            if epoch in args.when:
+                print('Saving model before learning rate decreased')
+                model_save('{}.e{}'.format(args.save, epoch))
+                print('Dividing learning rate by 10')
+                optimizer.param_groups[0]['lr'] /= 10.
+
+            best_val_loss.append(val_loss)
 
 except KeyboardInterrupt:
     print('-' * 89)
