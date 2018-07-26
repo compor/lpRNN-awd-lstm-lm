@@ -230,21 +230,30 @@ def train_curr():
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
+    # splits epochs to 10 parts.
+    
+    seq_len_block = round((train_data.size(0) - 1 - 1) * (epoch/args.epochs)**1.2)
+    print('Seed sequence length = {:3d}'.format(seq_len_block))
+    nblocks = 0
     while i < train_data.size(0) - 1 - 1:
-        bptt = args.bptt if np.random.random() < 0.95 else args.bptt / 2.
         # Prevent excessively small or negative sequence lengths
-        seq_len = max(5, int(np.random.normal(bptt, 5)))
-        # There's a very small chance that it could select a very long sequence length resulting in OOM
-        # seq_len = min(seq_len, args.bptt + 10)
+        seq_len = max(5, int(np.random.normal(seq_len_block/3, 5)))
+        # There's a chance that it could select a very long sequence length
+        seq_len = min(seq_len, args.bptt + 10)
 
         lr2 = optimizer.param_groups[0]['lr']
         optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
         model.train()
         data, targets = get_batch(train_data, i, args, seq_len=seq_len)
 
-        # Starting each batch, we detach the hidden state from how it was previously produced.
-        # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        hidden = repackage_hidden(hidden)
+        nblock_idx = int((i + seq_len)/seq_len_block)
+        if nblock_idx > nblocks:
+            hidden = model.init_hidden(args.batch_size)
+            hidden = repackage_hidden(hidden)
+            nblocks = nblock_idx
+        else:
+            hidden = repackage_hidden(hidden)
+            
         optimizer.zero_grad()
 
         output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
@@ -267,9 +276,10 @@ def train_curr():
             cur_loss = total_loss.item() / args.log_interval
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:05.5f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
-                epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
+                    'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f} | i/tot_len = {:5d}/{:5d}'.format(
+                epoch, batch, len(train_data) // seq_len, optimizer.param_groups[0]['lr'],
+                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2),
+                i, train_data.size(0)-1-1))
             total_loss = 0
             start_time = time.time()
         ###
@@ -292,7 +302,7 @@ try:
         optimizer = torch.optim.Adam(params, lr=args.lr, weight_decay=args.wdecay)
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        train()
+        train_curr()
         if 't0' in optimizer.param_groups[0]:
             tmp = {}
             for prm in model.parameters():
