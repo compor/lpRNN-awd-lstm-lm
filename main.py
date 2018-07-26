@@ -45,7 +45,7 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--nonmono', type=int, default=5,
                     help='random seed')
-parser.add_argument('--cuda', action='store_false',
+parser.add_argument('--cuda', type=int, default=True,
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
@@ -231,8 +231,8 @@ def train_curr():
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
     # splits epochs to 10 parts.
-    
-    seq_len_block = round((train_data.size(0) - 1 - 1) * (epoch/args.epochs)**1.2)
+
+    seq_len_block = round((train_data.size(0) - 1 - 1) * (epoch/args.epochs)**1.4)
     print('Seed sequence length = {:3d}'.format(seq_len_block))
     nblocks = 0
     while i < train_data.size(0) - 1 - 1:
@@ -253,7 +253,7 @@ def train_curr():
             nblocks = nblock_idx
         else:
             hidden = repackage_hidden(hidden)
-            
+
         optimizer.zero_grad()
 
         output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
@@ -285,7 +285,7 @@ def train_curr():
         ###
         batch += 1
         i += seq_len
-        
+
 
 # Loop over epochs.
 lr = args.lr
@@ -349,9 +349,14 @@ try:
 
             best_val_loss.append(val_loss)
 
+
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
+
+with open('loss.pickle', 'wb') as handle:
+    pickle.dump(best_val_loss, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 # Load the best saved model.
 model_load(args.save)
