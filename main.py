@@ -173,7 +173,6 @@ def train():
     if args.model == 'QRNN': model.reset()
     total_loss = 0
     start_time = time.time()
-    ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
     while i < train_data.size(0) - 1 - 1:
@@ -222,22 +221,35 @@ def train():
         batch += 1
         i += seq_len
 
-def train_curr():
+def loss_stagnant():
+    min_change = 0.01*best_val_loss[-1] # 1% loss reduction minimum
+    if epoch < 3:
+        return False
+    if (best_val_loss[-1] > (best_val_loss[-2] - min_change)):# and (best_val_loss[-2] > (best_val_loss[-3] - min_change)):
+        print('Loss stagnant ', best_val_loss[-1], best_val_loss[-2])
+        return True
+    else:
+        return False
+
+def train_curr(seq_len_block):
     # Turn on training mode which enables dropout.
     if args.model == 'QRNN': model.reset()
     total_loss = 0
     start_time = time.time()
-    ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
-    # splits epochs to 10 parts.
+    # Last 1/10 epochs run at full length
 
-    seq_len_block = round((train_data.size(0) - 1 - 1) * (epoch/args.epochs)**1.4)
-    print('Seed sequence length = {:3d}'.format(seq_len_block))
+    print('Seed sequence length = ', seq_len_block)
     nblocks = 0
-    while i < train_data.size(0) - 1 - 1:
+    nbatches = 2000
+    max_len = seq_len_block * nbatches 
+    if max_len > train_data.size(0) - 1 - 1:
+        max_len = train_data.size(0) - 1 - 1
+    
+    while i < max_len:#train_data.size(0) - 1 - 1:
         # Prevent excessively small or negative sequence lengths
-        seq_len = max(5, int(np.random.normal(seq_len_block/3, 5)))
+        seq_len = max(init_seq_len, int(np.random.normal(seq_len_block/3, 5)))
         # There's a chance that it could select a very long sequence length
         seq_len = min(seq_len, args.bptt + 10)
 
@@ -291,6 +303,7 @@ def train_curr():
 lr = args.lr
 best_val_loss = []
 stored_loss = 100000000
+init_seq_len = 3
 
 # At any point you can hit Ctrl + C to break out of training early.
 try:
@@ -300,9 +313,26 @@ try:
         optimizer = torch.optim.SGD(params, lr=args.lr, weight_decay=args.wdecay)
     if args.optimizer == 'adam':
         optimizer = torch.optim.Adam(params, lr=args.lr, weight_decay=args.wdecay)
+        
+    
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
-        train_curr()
+
+        # increase seq_len_block if error stagnates over three epochs
+        if epoch <= 3:
+            seq_len_block = init_seq_len # round((train_data.size(0) - 1 - 1) * (epoch/(0.9*args.epochs))**1.5)
+        elif loss_stagnant():
+            # max sequence length is reached after 25 increments of sequence length
+            seq_len_block = (train_data.size(0) - 1 - 1)**(1/25) * seq_len_block 
+            if seq_len_block > train_data.size(0) - 1 - 1:
+                seq_len_block = train_data.size(0) - 1 - 1
+                print('Seq len max: Dividing learning rate by 5')
+                optimizer.param_groups[0]['lr'] /= 5
+                if optimizer.param_groups[0]['lr'] < 1e-6:
+                    print('Reset learning rate to initial value')
+                    optimizer.param_groups[0]['lr'] = args.lr
+        train_curr(seq_len_block)
+#        train()
         if 't0' in optimizer.param_groups[0]:
             tmp = {}
             for prm in model.parameters():
@@ -353,8 +383,8 @@ try:
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
-
-with open('loss.pickle', 'wb') as handle:
+import pickle
+with open('loss2.pickle', 'wb') as handle:
     pickle.dump(best_val_loss, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
