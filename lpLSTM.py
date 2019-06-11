@@ -5,8 +5,10 @@ import torch.nn.functional as F
 class lpLSTM(nn.LSTM):
     def __init__(self, *kargs, **kwargs):
         super(lpLSTM, self).__init__(*kargs, **kwargs)
-        self.retention_ratio = nn.Parameter(torch.rand(self.hidden_size), requires_grad=False)
- 
+        # self.retention_ratio = nn.Parameter(torch.rand(self.hidden_size), requires_grad=False)
+        self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).uniform_(0.001, 1), requires_grad=False)
+        # self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).normal_(), requires_grad=False)
+
     # @weak_script_method
     def forward_impl(self, input, hx, batch_sizes, max_batch_size, sorted_indices):
         prev_output = hx[0]
