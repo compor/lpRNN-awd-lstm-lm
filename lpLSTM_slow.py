@@ -21,7 +21,8 @@ class lpLSTMCell(nn.RNNBase):
 
     def __init__(self, input_size, hidden_size, bias=True, dropout=0.0,
                  dropout_method='pytorch', jit=False, activation='relu'):
-        super(lpLSTMCell, self).__init__()
+        super(lpLSTMCell, self).__init__(mode='LSTM', input_size=input_size, hidden_size=hidden_size)
+        print('ALERT: Creating unoptimized LSTM cell. Use only if you want relu activation. ')
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
@@ -31,12 +32,36 @@ class lpLSTMCell(nn.RNNBase):
         self.reset_parameters()
         assert(dropout_method.lower() in ['pytorch', 'gal', 'moon', 'semeniuta'])
         self.dropout_method = dropout_method
-        print("Creating slow lpLSTM cell")
         if activation =='tanh':
            self.activation = F.tanh
         else:
            self.activation = F.relu
         self.retention_ratio = nn.Parameter(th.FloatTensor(self.hidden_size).uniform_(0.001, 1), requires_grad=False)
+        # layer_params = [self.i2h.weight, self.h2h.weight, self.i2h.bias, self.h2h.bias]
+        # param_names = ['weight_ih_l0', 'weight_hh_l0']
+        # if bias:
+        #     param_names += ['bias_ih_l0', 'bias_hh_l0']
+        # for name, param in zip(param_names, layer_params):
+        #     setattr(self, name, param)
+        # self._all_weights.append(param_names)
+        # for name, p in self.named_parameters():
+        #     print(f'Name is {name} with value {p}')
+        # for name_w in param_names:
+        #     w = getattr(self, name_w)
+        #     print(f'w is {w.shape} with name {name_w}')
+
+    def __getattr__(self, attr):
+        if attr == 'weight_hh_l0':
+            getattr(self.h2h, 'weight')
+        elif attr == 'bias_hh_l0':
+            getattr(self.h2h, 'bias')
+        elif attr == 'weight_ih_l0':
+            getattr(self.i2h, 'weight')
+        elif attr == 'bias_ih_l0':
+            getattr(self.i2h, 'bias')
+        else:
+            return attr
+
 
     def sample_mask(self):
         keep = 1.0 - self.dropout
