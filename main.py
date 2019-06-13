@@ -9,7 +9,6 @@ import data
 import model
 
 from utils import batchify, get_batch, repackage_hidden
-import lpLSTM
 from tensorboardX import SummaryWriter
 import os
 import hashlib
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, default='data/penn/',
                         help='location of the data corpus')
     parser.add_argument('--model', type=str, default='LSTM',
-                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM)')
+                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMrelu)')
     parser.add_argument('--emsize', type=int, default=400,
                         help='size of word embeddings')
     parser.add_argument('--nhid', type=int, default=1150,
@@ -232,7 +231,9 @@ if __name__ == '__main__':
     total_params = sum(x.size()[0] * x.size()[1] if len(x.size()) > 1 else x.size()[0] for x in params if x.size())
     print('Args:', args)
     print('Model total parameters:', total_params)
-
+    print('+'*89)
+    print(model)
+    print('+'*89)
     lr = args.lr
     best_val_loss = []
     stored_loss = 100000000
