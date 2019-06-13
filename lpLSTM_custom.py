@@ -2,12 +2,13 @@ import math
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor as T
-from torch.nn import Parameter as P
-from torch.autograd import Variable as V
+from torch.nn import Parameter
 import torch.jit as jit
 
-class lpLSTM(nn.Module):
+"""
+Reuse code from https://github.com/pytorch/pytorch/blob/master/benchmarks/fastrnns/custom_lstms.py
+"""
+class lpLSTM(jit.ScriptModule):
     """
     An implementation of Hochreiter & Schmidhuber:
     'Long-Short Term Memory'
@@ -18,6 +19,9 @@ class lpLSTM(nn.Module):
                     ,activation='tanh', train_ret_ratio=False):
         # super(lpLSTMCell, self).__init__(mode='LSTM', input_size=input_size, hidden_size=hidden_size)
         super(lpLSTM, self).__init__()
+        print('='*89)
+        print('ALERT: Running LSTM Custom module that is not yet fully tested!!!!!!')
+        print('='*89)
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
@@ -46,10 +50,6 @@ class lpLSTM(nn.Module):
             setattr(self, name, param)
         self.reset_parameters()
 
-    def sample_mask(self):
-        keep = 1.0 - self.dropout
-        self.mask = V(th.bernoulli(T(1, self.hidden_size).fill_(keep)))
-
     def reset_parameters(self):
         std = 1.0 / math.sqrt(self.hidden_size)
         for w in self.parameters():
@@ -60,27 +60,28 @@ class lpLSTM(nn.Module):
         outputs = []
         for x in th.unbind(input_, dim=0):
             # print(x.shape, self.w_xi.shape)
-            h = self.forward_single(x, hidden)
+            h = self.forward_step(x, hidden)
             outputs.append(h[0].clone())
             hidden = h[1]
         op = th.squeeze(th.stack(outputs))
         # print('MVN', op.shape, hidden[0].shape, hidden[1].shape)
         return op, hidden
 
-    def forward_single(self, input, state):
+    def forward_step(self, input, state):
         # type: (Tensor, Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tuple[Tensor, Tensor]]
-        hx, cx = state
+        hx, cx = th.squeeze(state[0]), th.squeeze(state[1])
+
         gates = (th.mm(input, self.weight_ih.t()) + self.bias_ih +
                  th.mm(hx, self.weight_hh.t()) + self.bias_hh)
         ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
         ingate = th.sigmoid(ingate)
         forgetgate = th.sigmoid(forgetgate)
-        cellgate = th.tanh(cellgate)
+        cellgate = self.activation(cellgate)
         outgate = th.sigmoid(outgate)
 
         cy = (forgetgate * cx) + (ingate * cellgate)
-        hy = outgate * th.tanh(cy)
+        hy = outgate * self.activation(cy)
         # # Filtering 
         hy = self.retention_ratio * hx + (1-self.retention_ratio) * hy
         if self.dropout > 0.0:
@@ -94,4 +95,4 @@ if __name__ == '__main__':
    c0 = th.randn(1, 3, 20)
    #output, (hn, cn) = rnn(input, (h0, c0))
    x =  rnn(input, (h0, c0))
-   print(len(x))
+   print(x)
