@@ -6,7 +6,7 @@ class lpLSTM(nn.LSTM):
     def __init__(self, *kargs, **kwargs):
         super(lpLSTM, self).__init__(*kargs, **kwargs)
         # self.retention_ratio = nn.Parameter(torch.rand(self.hidden_size), requires_grad=False)
-        self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).uniform_(0.001, 1))#, requires_grad=True)
+        self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).uniform_(0.001, 1), requires_grad=False)
         # self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).uniform_(0.1, 0.2), requires_grad=False)
         # self.retention_ratio = nn.Parameter(torch.FloatTensor(self.hidden_size).normal_(), requires_grad=False)
 

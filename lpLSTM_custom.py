@@ -8,14 +8,15 @@ import torch.jit as jit
 """
 Reuse code from https://github.com/pytorch/pytorch/blob/master/benchmarks/fastrnns/custom_lstms.py
 """
-class lpLSTM(jit.ScriptModule):
+# class lpLSTM(jit.ScriptModule):
+class lpLSTM(nn.Module):
     """
     An implementation of Hochreiter & Schmidhuber:
     'Long-Short Term Memory'
     http://www.bioinf.jku.at/publications/older/2604.pdf
     retention_ratio: for low pass filtering the RNN
     """
-    def __init__(self, input_size, hidden_size, bias=True, dropout=0.0
+    def __init__(self, input_size, hidden_size, bias=True, dropout=0.0, wdropout=0.0
                     ,activation='tanh', train_ret_ratio=False):
         # super(lpLSTMCell, self).__init__(mode='LSTM', input_size=input_size, hidden_size=hidden_size)
         super(lpLSTM, self).__init__()
@@ -26,17 +27,18 @@ class lpLSTM(jit.ScriptModule):
         self.hidden_size = hidden_size
         self.bias = bias
         self.dropout = dropout
-        self.weight_ih = Parameter(th.randn(4 * hidden_size, input_size))
-        self.weight_hh = Parameter(th.randn(4 * hidden_size, hidden_size))
-
-        # Wrap biases as parameters if desired, else as variables without gradients
-        if bias:
-            self.bias_ih = Parameter(th.randn(4 * hidden_size), requires_grad=True)
-            self.bias_hh = Parameter(th.randn(4 * hidden_size), requires_grad=True)
+        if wdropout:
+            self.raw_w_ih = th.randn(4 * hidden_size, input_size)
+            self.weight_ih = Parameter(F.dropout(self.raw_w_ih, p=wdropout, training=self.training))
+            self.raw_w_hh =  th.randn(4 * hidden_size, hidden_size)
+            self.weight_hh = Parameter(F.dropout(self.raw_w_hh, p=wdropout, training=self.training))
         else:
-            self.bias_ih = Parameter(th.randn(4 * hidden_size), requires_grad=False)
-            self.bias_hh = Parameter(th.randn(4 * hidden_size), requires_grad=False)
-
+            self.weight_ih = Parameter(th.randn(4 * hidden_size, input_size))
+            self.weight_hh = Parameter(th.randn(4 * hidden_size, hidden_size))
+        
+        # Wrap biases as parameters if desired, else as variables without gradients
+        self.bias_ih = Parameter(th.randn(4 * hidden_size), requires_grad=self.bias)
+        self.bias_hh = Parameter(th.randn(4 * hidden_size), requires_grad=self.bias)
 
         if activation =='tanh':
            self.activation = th.tanh
@@ -70,7 +72,6 @@ class lpLSTM(jit.ScriptModule):
     def forward_step(self, input, state):
         # type: (Tensor, Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tuple[Tensor, Tensor]]
         hx, cx = th.squeeze(state[0]), th.squeeze(state[1])
-
         gates = (th.mm(input, self.weight_ih.t()) + self.bias_ih +
                  th.mm(hx, self.weight_hh.t()) + self.bias_hh)
         ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)

@@ -94,18 +94,26 @@ def train():
                     'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
                 epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
                 elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
+            writer.add_scalar('Train loss', cur_loss, epoch)                
+            writer.add_scalar('Train ppl', math.exp(cur_loss), epoch)                
+            writer.add_scalar('Train bpc', cur_loss/math.log(2), epoch) 
             total_loss = 0
             start_time = time.time()
         ###
         batch += 1
         i += seq_len
 
+def dump_graph():
+    dummy_input, _ = get_batch(train_data, 0, args, seq_len=1)
+    writer.add_graph(model, dummy_input, True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
     parser.add_argument('--data', type=str, default='data/penn/',
                         help='location of the data corpus')
     parser.add_argument('--model', type=str, default='LSTM',
-                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMrelu)')
+                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMc)')
     parser.add_argument('--emsize', type=int, default=400,
                         help='size of word embeddings')
     parser.add_argument('--nhid', type=int, default=1150,
@@ -231,6 +239,9 @@ if __name__ == '__main__':
     total_params = sum(x.size()[0] * x.size()[1] if len(x.size()) > 1 else x.size()[0] for x in params if x.size())
     print('Args:', args)
     print('Model total parameters:', total_params)
+    total_params = sum(x.size()[0] * x.size()[1] if len(x.size()) > 1 else x.size()[0] for x in params if (x.requires_grad==True and x.size()))
+    print('Model trainable parameters:', total_params)
+    
     print('+'*89)
     print(model)
     print('+'*89)
