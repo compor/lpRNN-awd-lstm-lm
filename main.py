@@ -109,6 +109,12 @@ def dump_graph():
 
 
 if __name__ == '__main__':
+    # Run commands 
+    # 1. For lpLSTM: python main.py --batch_size 20 --data data/penn --dropouti 0.4 
+    #       --dropouth 0.25 --seed 141 --epoch 500 --save PTB.pt --model=lpLSTMc
+    # 2. For original LSTM: python main.py --batch_size 20 --data data/penn --dropouti 0.4 
+    #       --dropouth 0.25 --seed 141 --epoch 500 --save PTB.pt
+
     parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
     parser.add_argument('--data', type=str, default='data/penn/',
                         help='location of the data corpus')
