@@ -31,7 +31,6 @@ class RNNModel(nn.Module):
                 self.rnns = [WeightDrop(rnn, ['weight_hh_l0'], dropout=wdrop) for rnn in self.rnns]
         elif rnn_type == 'lpLSTMc':
             from lpLSTM_custom import lpLSTM
-            # from lpLSTM_slow import lpLSTM
             self.rnns = [lpLSTM(ninp if l == 0 else nhid, nhid if l != nlayers - 1 else ninp, 1, dropout=0, wdropout=wdrop) for l in range(nlayers)]
         elif rnn_type == 'QRNN':
             from torchqrnn import QRNNLayer

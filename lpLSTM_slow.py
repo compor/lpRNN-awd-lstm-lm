@@ -23,6 +23,9 @@ class lpLSTM(nn.Module):
                     ,activation='tanh', train_ret_ratio=False):
         # super(lpLSTMCell, self).__init__(mode='LSTM', input_size=input_size, hidden_size=hidden_size)
         super(lpLSTM, self).__init__()
+        print('='*89)
+        print('ALERT: Running LSTM Custom module that is slow. Use lpLSTM_custom instead!!!!!!')
+        print('='*89)
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
