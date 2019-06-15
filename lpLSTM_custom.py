@@ -68,6 +68,7 @@ class lpLSTM(nn.Module):
 
     def forward_step(self, input, state):
         # type: (Tensor, Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tuple[Tensor, Tensor]]
+        # ALERT: Bug in code here. Does not work for batch_size of 1.
         hx, cx = th.squeeze(state[0]), th.squeeze(state[1])
         gates = (th.mm(input, self.weight_ih.t()) + self.bias_ih +
                  th.mm(hx, self.weight_hh.t()) + self.bias_hh)

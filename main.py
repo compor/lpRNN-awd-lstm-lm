@@ -203,7 +203,7 @@ if __name__ == '__main__':
         torch.save(corpus, fn)
 
     eval_batch_size = 10
-    test_batch_size = 1
+    test_batch_size = 2
     train_data = batchify(corpus.train, args.batch_size, args)
     val_data = batchify(corpus.valid, eval_batch_size, args)
     test_data = batchify(corpus.test, test_batch_size, args)
