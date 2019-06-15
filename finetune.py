@@ -19,22 +19,35 @@ import datetime
 # Training code
 ###############################################################################
 
+# def evaluate(data_source, batch_size=10):
+#     # Turn on evaluation mode which disables dropout.
+#     if args.model == 'QRNN': model.reset()
+#     model.eval()
+#     total_loss = 0
+#     ntokens = len(corpus.dictionary)
+#     hidden = model.init_hidden(batch_size)
+#     for i in range(0, data_source.size(0) - 1, args.bptt):
+#         data, targets = get_batch(data_source, i, args, evaluation=True)
+#         output, hidden = model(data, hidden)
+#         # output_flat = output.view(-1, ntokens)
+#         # total_loss += len(data) * criterion(output_flat, targets).data
+#         total_loss += len(data) * criterion(output, targets).data
+#         hidden = repackage_hidden(hidden)
+#     return total_loss[0] / len(data_source)
+
 def evaluate(data_source, batch_size=10):
     # Turn on evaluation mode which disables dropout.
-    if args.model == 'QRNN': model.reset()
     model.eval()
+    if args.model == 'QRNN': model.reset()
     total_loss = 0
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(batch_size)
     for i in range(0, data_source.size(0) - 1, args.bptt):
         data, targets = get_batch(data_source, i, args, evaluation=True)
         output, hidden = model(data, hidden)
-        # output_flat = output.view(-1, ntokens)
-        # total_loss += len(data) * criterion(output_flat, targets).data
-        total_loss += len(data) * criterion(output, targets).data
+        total_loss += len(data) * criterion(model.decoder.weight, model.decoder.bias, output, targets).data
         hidden = repackage_hidden(hidden)
-    return total_loss[0] / len(data_source)
-
+    return total_loss.item() / len(data_source)
 
 def train():
     # Turn on training mode which enables dropout.
@@ -49,7 +62,7 @@ def train():
         # Prevent excessively small or negative sequence lengths
         seq_len = max(5, int(np.random.normal(bptt, 5)))
         # There's a very small chance that it could select a very long sequence length resulting in OOM
-        seq_len = min(seq_len, args.bptt + 10)
+        # seq_len = min(seq_len, args.bptt + 10)
 
         lr2 = optimizer.param_groups[0]['lr']
         optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
@@ -59,36 +72,37 @@ def train():
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         hidden = repackage_hidden(hidden)
-        optimizer.zero_grad()
+        # hidden = nn.Parameter(hidden)
 
+        optimizer.zero_grad()
         output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
-        raw_loss = criterion(output.view(-1, ntokens), targets)
+        raw_loss = criterion(model.decoder.weight, model.decoder.bias, output, targets)
 
         loss = raw_loss
-        # Activiation Regularization
-        loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
+        # Activation Regularization
+        if args.alpha: loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
         # Temporal Activation Regularization (slowness)
-        loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
+        if args.beta: loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
         loss.backward()
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
+        if args.clip: torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
         optimizer.step()
 
         total_loss += raw_loss.data
         optimizer.param_groups[0]['lr'] = lr2
         if batch % args.log_interval == 0 and batch > 0:
-            cur_loss = total_loss[0] / args.log_interval
+            cur_loss = total_loss.item() / args.log_interval
             elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
+            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:05.5f} | ms/batch {:5.2f} | '
+                    'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
                 epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
-            total_loss = 0
-            start_time = time.time()
+                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
             writer.add_scalar('Train loss', cur_loss, epoch)                
             writer.add_scalar('Train ppl', math.exp(cur_loss), epoch)                
             writer.add_scalar('Train bpc', cur_loss/math.log(2), epoch) 
+            total_loss = 0
+            start_time = time.time()
         ###
         batch += 1
         i += seq_len
@@ -183,6 +197,8 @@ if __name__ == '__main__':
     ###############################################################################
     # Build the model
     ###############################################################################
+    from splitcross import SplitCrossEntropyLoss
+    criterion = None
 
     ntokens = len(corpus.dictionary)
     model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.dropouth, args.dropouti, args.dropoute, args.wdrop, args.tied)
@@ -192,7 +208,19 @@ if __name__ == '__main__':
     print('Args:', args)
     print('Model total parameters:', total_params)
 
-    criterion = nn.CrossEntropyLoss()
+    if not criterion:
+        splits = []
+        if ntokens > 500000:
+            # One Billion
+            # This produces fairly even matrix mults for the buckets:
+            # 0: 11723136, 1: 10854630, 2: 11270961, 3: 11219422
+            splits = [4200, 35000, 180000]
+        elif ntokens > 75000:
+            # WikiText-103
+            splits = [2800, 20000, 76000]
+        print('Using', splits)
+    # criterion = nn.CrossEntropyLoss()
+    criterion = SplitCrossEntropyLoss(args.emsize, splits=splits, verbose=False)
 
     # Load the best saved model.
     with open(args.save, 'rb') as f:
