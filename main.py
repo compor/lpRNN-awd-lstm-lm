@@ -118,6 +118,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch PennTreeBank RNN/LSTM Language Model')
     parser.add_argument('--data', type=str, default='data/penn/',
                         help='location of the data corpus')
+    parser.add_argument('--savepath', type=str, default='.',
+                        help='loation to dump results')
     parser.add_argument('--model', type=str, default='LSTM',
                         help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMc)')
     parser.add_argument('--emsize', type=int, default=400,
@@ -173,7 +175,11 @@ if __name__ == '__main__':
     args.tied = True
 
 
-    writer = SummaryWriter('runs/'+f'{args.model}'+datetime.datetime.now().strftime('%b%d_%H-%M-%S'))
+    writer_path = os.path.join(args.savepath, 'runs', '')
+    args.save   = os.path.join(args.savepath, args.save)
+    print(args.save)
+
+    writer = SummaryWriter(writer_path+f'{args.model}'+datetime.datetime.now().strftime('%b%d_%H-%M-%S'))
 
     # Set the random seed manually for reproducibility.
     np.random.seed(args.seed)
