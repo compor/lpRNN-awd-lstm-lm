@@ -37,6 +37,8 @@ import datetime
 
 def evaluate(data_source, batch_size=10):
     # Turn on evaluation mode which disables dropout.
+    if isinstance(model, list):
+        model = model[0]
     model.eval()
     if args.model == 'QRNN': model.reset()
     total_loss = 0
