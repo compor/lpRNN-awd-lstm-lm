@@ -1,5 +1,6 @@
 runs/
 *.data
+*.swn
 *.swp
 *.swo
 *.pt

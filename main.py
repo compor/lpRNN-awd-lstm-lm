@@ -122,6 +122,8 @@ if __name__ == '__main__':
                         help='loation to dump results')
     parser.add_argument('--model', type=str, default='LSTM',
                         help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMc)')
+    parser.add_argument('--activation', type=str, default='tanh',
+                        help='relu or tanh for RNN recurrent activation')
     parser.add_argument('--emsize', type=int, default=400,
                         help='size of word embeddings')
     parser.add_argument('--nhid', type=int, default=1150,
