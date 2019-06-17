@@ -37,8 +37,6 @@ import datetime
 
 def evaluate(data_source, batch_size=10):
     # Turn on evaluation mode which disables dropout.
-    if isinstance(model, list):
-        model = model[0]
     model.eval()
     if args.model == 'QRNN': model.reset()
     total_loss = 0
@@ -172,7 +170,7 @@ if __name__ == '__main__':
 
     writer_path = os.path.join(args.savepath, 'runs', '')
     args.save   = os.path.join(args.savepath, args.save)
-    print(args.save)
+    print(f'Save file is {args.save}')
 
     writer = SummaryWriter(writer_path+f'{args.model}'+datetime.datetime.now().strftime('%b%d_%H-%M-%S'))
 
@@ -227,7 +225,10 @@ if __name__ == '__main__':
     # Load the best saved model.
     with open(args.save, 'rb') as f:
         model = torch.load(f)[0]
-
+    # Hacky thing...
+    if type(model) == list:
+        model = model[0]
+    print(f'model is {model}')
     # Loop over epochs.
     lr = args.lr
     stored_loss = evaluate(val_data, batch_size=eval_batch_size)
