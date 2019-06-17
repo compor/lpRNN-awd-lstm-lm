@@ -177,6 +177,7 @@ if __name__ == '__main__':
 
     writer_path = os.path.join(args.savepath, 'runs', '')
     args.save   = os.path.join(args.savepath, args.save)
+    args.resume   = os.path.join(args.savepath, args.resume)
     print(args.save)
 
     writer = SummaryWriter(writer_path+f'{args.model}'+datetime.datetime.now().strftime('%b%d_%H-%M-%S'))
