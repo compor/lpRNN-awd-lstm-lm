@@ -122,8 +122,6 @@ if __name__ == '__main__':
                         help='loation to dump results')
     parser.add_argument('--model', type=str, default='LSTM',
                         help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMc)')
-    parser.add_argument('--activation', type=str, default='tanh',
-                        help='relu or tanh for RNN recurrent activation')
     parser.add_argument('--emsize', type=int, default=400,
                         help='size of word embeddings')
     parser.add_argument('--nhid', type=int, default=1150,
@@ -218,7 +216,7 @@ if __name__ == '__main__':
     criterion = None
 
     ntokens = len(corpus.dictionary)
-    model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.dropouth, args.dropouti, args.dropoute, args.wdrop, args.tied, args.activation)
+    model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.dropouth, args.dropouti, args.dropoute, args.wdrop, args.tied)
     ###
     if args.resume:
         print('Resuming model ...')

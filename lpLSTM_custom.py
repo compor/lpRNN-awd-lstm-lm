@@ -38,7 +38,6 @@ class lpLSTM(nn.Module):
         self.bias_ih = Parameter(th.randn(4 * hidden_size), requires_grad=self.bias)
         self.bias_hh = Parameter(th.randn(4 * hidden_size), requires_grad=self.bias)
         # Recurrent activation
-        print(f'Create lpLSTM cell with {activation} ')
         if activation =='tanh':
            self.activation = th.tanh
         else:
