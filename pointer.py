@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 import math
 import numpy as np
@@ -94,6 +95,8 @@ if __name__ == '__main__':
                         help='mix between uniform distribution and pointer softmax distribution over previous words')
     parser.add_argument('--lambdasm', type=float, default=0.12785920428335693,
                         help='linear mix between only pointer (1) and only vocab (0) distribution')
+    parser.add_argument('--savepath', type=str, default='.',
+                        help='loation to dump results')
     args = parser.parse_args()
 
     ###############################################################################
@@ -114,13 +117,16 @@ if __name__ == '__main__':
 
     ntokens = len(corpus.dictionary)
     criterion = nn.CrossEntropyLoss()
-
+    args.save   = os.path.join(args.savepath, args.save)
+    print(args.save)
     # Load the best saved model.
     with open(args.save, 'rb') as f:
         if not args.cuda:
             model = torch.load(f, map_location=lambda storage, loc: storage)
         else:
             model = torch.load(f)
+    if type(model) == list:
+        model = model[0] # Why does load return a list?
     print(model)
 
     # Run on val data.
