@@ -1,12 +1,14 @@
 # Pytorch 1.0 port of the AWD LSTM Language model
 Changes include
 + Addition of the low pass LSTM module option.
-+ Fix the drop connect regularizer (Sourced from https://github.com/salesforce/awd-lstm-lm/issues/86#issuecomment-447910610)
++ Fix the drop connect regularizer ([Source] (https://github.com/salesforce/awd-lstm-lm/issues/86#issuecomment-447910610))
 + Refactor code to make windows compatible.
 + Add tensorboard options.
 + Several minor changes all over to make things compatible.
 + Note: QRNN is not tested and may not run.
 
+Reference paper for the temporal regularization property of the low pass filtering cells:
+[A neuromorphic boost to RNNs using low pass filters](https://arxiv.org/abs/1905.10692)
 The following is the original ReadMe.
 
 # LSTM and QRNN Language Model Toolkit
