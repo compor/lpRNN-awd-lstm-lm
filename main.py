@@ -121,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--savepath', type=str, default='.',
                         help='loation to dump results')
     parser.add_argument('--model', type=str, default='LSTM',
-                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM, lpLSTMc)')
+                        help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM)')
     parser.add_argument('--emsize', type=int, default=400,
                         help='size of word embeddings')
     parser.add_argument('--nhid', type=int, default=1150,

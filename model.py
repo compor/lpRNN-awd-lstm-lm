@@ -28,11 +28,6 @@ class RNNModel(nn.Module):
             from lpLSTM import lpLSTM
             self.rnns = [lpLSTM(ninp if l == 0 else nhid, nhid if l != nlayers - 1 else ninp, 1, dropout=0) for l in range(nlayers)]
             if wdrop:
-                self.rnns = [WeightDrop(rnn, ['weight_hh_l0'], dropout=wdrop) for rnn in self.rnns]
-        elif rnn_type == 'lpLSTMc':
-            from lpLSTM_custom import lpLSTM
-            self.rnns = [lpLSTM(ninp if l == 0 else nhid, nhid if l != nlayers - 1 else ninp, 1, dropout=0) for l in range(nlayers)]
-            if wdrop:
                 self.rnns = [WeightDrop(rnn, ['weight_hh'], dropout=wdrop) for rnn in self.rnns]
         elif rnn_type == 'QRNN':
             from torchqrnn import QRNNLayer
@@ -111,10 +106,6 @@ class RNNModel(nn.Module):
                     weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else (self.ninp if self.tie_weights else self.nhid)).zero_())
                     for l in range(self.nlayers)]
         elif self.rnn_type == 'lpLSTM':
-            return [(weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else (self.ninp if self.tie_weights else self.nhid)).zero_(),
-                    weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else (self.ninp if self.tie_weights else self.nhid)).zero_())
-                    for l in range(self.nlayers)]
-        elif self.rnn_type == 'lpLSTMc':
             return [(weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else (self.ninp if self.tie_weights else self.nhid)).zero_(),
                     weight.new(1, bsz, self.nhid if l != self.nlayers - 1 else (self.ninp if self.tie_weights else self.nhid)).zero_())
                     for l in range(self.nlayers)]
