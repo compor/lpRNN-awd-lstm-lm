@@ -10,6 +10,16 @@ Changes include
 Reference paper for the temporal regularization property of the low pass filtering cells:
 
 [A neuromorphic boost to RNNs using low pass filters](https://arxiv.org/abs/1905.10692)
+For citations:
+```
+@article{nair2019neuromorphic,
+  title={A neuromorphic boost to RNNs using low pass filters},
+  author={Nair, Manu V and Indiveri, Giacomo},
+  journal={arXiv preprint arXiv:1905.10692},
+  year={2019}
+}
+```
+
 The following is the original ReadMe.
 
 ## LSTM and QRNN Language Model Toolkit
