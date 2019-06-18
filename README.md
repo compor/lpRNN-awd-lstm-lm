@@ -12,7 +12,7 @@ Reference paper for the temporal regularization property of the low pass filteri
 [A neuromorphic boost to RNNs using low pass filters](https://arxiv.org/abs/1905.10692)
 The following is the original ReadMe.
 
-# LSTM and QRNN Language Model Toolkit
+## LSTM and QRNN Language Model Toolkit
 
 This repository contains the code used for two [Salesforce Research](https://einstein.ai/) papers:
 + [Regularizing and Optimizing LSTM Language Models](https://arxiv.org/abs/1708.02182)
@@ -51,11 +51,11 @@ If you use this code or our results in your research, please cite as appropriate
   year={2018}
 }
 ```
-## Update (June/13/2018)
+### Update (June/13/2018)
 
 The codebase is now PyTorch 0.4 compatible for most use cases (a big shoutout to https://github.com/shawntan for a fairly comprehensive PR https://github.com/salesforce/awd-lstm-lm/pull/43). Mild readjustments to hyperparameters may be necessary to obtain quoted performance. If you desire exact reproducibility (or wish to run on PyTorch 0.3 or lower), we suggest using an older commit of this repository. We are still working on `pointer`, `finetune` and `generate` functionalities.
 
-## Software Requirements
+### Software Requirements
 
 Python 3 and PyTorch 0.4 are required for the current codebase.
 
@@ -65,7 +65,7 @@ If you need to use an earlier version of the codebase, the original code and hyp
 If you are using Anaconda, installation of PyTorch 0.1.12 can be achieved via:
 `conda install pytorch=0.1.12 -c soumith`.
 
-## Experiments
+### Experiments
 
 The codebase was modified during the writing of the paper, preventing exact reproduction due to minor differences in random seeds or similar.
 We have also seen exact reproduction numbers change when changing underlying GPU.
@@ -84,19 +84,19 @@ The QRNN model uses a QRNN with convolutional size 2 for the first layer, allowi
 
 **Pointer note:** BPTT just changes the length of the sequence pushed onto the GPU but won't impact the final result.
 
-### Character level enwik8 with LSTM
+#### Character level enwik8 with LSTM
 
 + `python -u main.py --epochs 50 --nlayers 3 --emsize 400 --nhid 1840 --alpha 0 --beta 0 --dropoute 0 --dropouth 0.1 --dropouti 0.1 --dropout 0.4 --wdrop 0.2 --wdecay 1.2e-6 --bptt 200 --batch_size 128 --optimizer adam --lr 1e-3 --data data/enwik8 --save ENWIK8.pt --when 25 35`
 
-### Character level Penn Treebank (PTB) with LSTM
+#### Character level Penn Treebank (PTB) with LSTM
 
 + `python -u main.py --epochs 500 --nlayers 3 --emsize 200 --nhid 1000 --alpha 0 --beta 0 --dropoute 0 --dropouth 0.25 --dropouti 0.1 --dropout 0.1 --wdrop 0.5 --wdecay 1.2e-6 --bptt 150 --batch_size 128 --optimizer adam --lr 2e-3 --data data/pennchar --save PTBC.pt --when 300 400`
 
-### Word level WikiText-103 (WT103) with QRNN
+#### Word level WikiText-103 (WT103) with QRNN
 
 + `python -u main.py --epochs 14 --nlayers 4 --emsize 400 --nhid 2500 --alpha 0 --beta 0 --dropoute 0 --dropouth 0.1 --dropouti 0.1 --dropout 0.1 --wdrop 0 --wdecay 0 --bptt 140 --batch_size 60 --optimizer adam --lr 1e-3 --data data/wikitext-103 --save WT103.12hr.QRNN.pt --when 12 --model QRNN`
 
-### Word level Penn Treebank (PTB) with LSTM
+#### Word level Penn Treebank (PTB) with LSTM
 
 The instruction below trains a PTB model that without finetuning achieves perplexities of approximately `61.2` / `58.8` (validation / testing), with finetuning achieves perplexities of approximately `58.8` / `56.5`, and with the continuous cache pointer augmentation achieves perplexities of approximately `53.2` / `52.5`.
 
@@ -104,7 +104,7 @@ The instruction below trains a PTB model that without finetuning achieves perple
 + `python finetune.py --batch_size 20 --data data/penn --dropouti 0.4 --dropouth 0.25 --seed 141 --epoch 500 --save PTB.pt`
 + `python pointer.py --data data/penn --save PTB.pt --lambdasm 0.1 --theta 1.0 --window 500 --bptt 5000`
 
-### Word level Penn Treebank (PTB) with QRNN
+#### Word level Penn Treebank (PTB) with QRNN
 
 The instruction below trains a QRNN model that without finetuning achieves perplexities of approximately `60.6` / `58.3` (validation / testing), with finetuning achieves perplexities of approximately `59.1` / `56.7`, and with the continuous cache pointer augmentation achieves perplexities of approximately `53.4` / `52.6`.
 
@@ -112,14 +112,14 @@ The instruction below trains a QRNN model that without finetuning achieves perpl
 + `python -u finetune.py --model QRNN --batch_size 20 --clip 0.2 --wdrop 0.1 --nhid 1550 --nlayers 4 --emsize 400 --dropouth 0.3 --seed 404 --dropouti 0.4 --epochs 300 --save PTB.pt`
 + `python pointer.py --model QRNN --lambdasm 0.1 --theta 1.0 --window 500 --bptt 5000 --save PTB.pt`
 
-### Word level WikiText-2 (WT2) with LSTM
+#### Word level WikiText-2 (WT2) with LSTM
 The instruction below trains a PTB model that without finetuning achieves perplexities of approximately `68.7` / `65.6` (validation / testing), with finetuning achieves perplexities of approximately `67.4` / `64.7`, and with the continuous cache pointer augmentation achieves perplexities of approximately `52.2` / `50.6`.
 
 + `python main.py --epochs 750 --data data/wikitext-2 --save WT2.pt --dropouth 0.2 --seed 1882`
 + `python finetune.py --epochs 750 --data data/wikitext-2 --save WT2.pt --dropouth 0.2 --seed 1882`
 + `python pointer.py --save WT2.pt --lambdasm 0.1279 --theta 0.662 --window 3785 --bptt 2000 --data data/wikitext-2`
 
-### Word level WikiText-2 (WT2) with QRNN
+#### Word level WikiText-2 (WT2) with QRNN
 
 The instruction below will a QRNN model that without finetuning achieves perplexities of approximately `69.3` / `66.8` (validation / testing), with finetuning achieves perplexities of approximately `68.5` / `65.9`, and with the continuous cache pointer augmentation achieves perplexities of approximately `53.6` / `52.1`.
 Better numbers are likely achievable but the hyper parameters have not been extensively searched. These hyper parameters should serve as a good starting point however.
@@ -128,7 +128,7 @@ Better numbers are likely achievable but the hyper parameters have not been exte
 + `python finetune.py --epochs 500 --data data/wikitext-2 --clip 0.25 --dropouti 0.4 --dropouth 0.2 --nhid 1550 --nlayers 4 --seed 4002 --model QRNN --wdrop 0.1 --batch_size 40 --save WT2.pt`
 + `python -u pointer.py --save WT2.pt --model QRNN --lambdasm 0.1279 --theta 0.662 --window 3785 --bptt 2000 --data data/wikitext-2`
 
-## Speed
+### Speed
 
 For speed regarding character-level PTB and enwik8 or word-level WikiText-103, refer to the relevant paper.
 
@@ -143,11 +143,11 @@ Speeds are approximately three times slower on a K80. On a K80 or other memory c
 
 If speed is a major issue, SGD converges more quickly than our non-monotonically triggered variant of ASGD though achieves a worse overall perplexity.
 
-### Details of the QRNN optimization
+#### Details of the QRNN optimization
 
 For full details, refer to the [PyTorch QRNN repository](https://github.com/salesforce/pytorch-qrnn).
 
-### Details of the LSTM optimization
+#### Details of the LSTM optimization
 
 All the augmentations to the LSTM, including our variant of [DropConnect (Wan et al. 2013)](https://cs.nyu.edu/~wanli/dropc/dropc.pdf) termed weight dropping which adds recurrent dropout, allow for the use of NVIDIA's cuDNN LSTM implementation.
 PyTorch will automatically use the cuDNN backend if run on CUDA with cuDNN installed.
