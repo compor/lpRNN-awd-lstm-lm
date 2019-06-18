@@ -1,6 +1,11 @@
+# Weight drop implementation by sdraper-CS 
+# from https://github.com/salesforce/awd-lstm-lm/issues/86#issuecomment-447910610
+
 import torch
 from torch.nn import Parameter
 from functools import wraps
+
+
 class BackHook(torch.nn.Module):
     def __init__(self, hook):
         super(BackHook, self).__init__()
@@ -27,7 +32,7 @@ class WeightDrop(torch.nn.Module):
         self.dropout = dropout
         self.variational = variational
         self._setup()
-        self.hooker = BackHook(self._backward)
+        self.wdrop = BackHook(self._backward)
 
     def _setup(self):
         for name_w in self.weights:
@@ -57,7 +62,7 @@ class WeightDrop(torch.nn.Module):
 
     def forward(self, *args):
         self._setweights()
-        return self.module(*self.hooker(*args))
+        return self.module(*self.wdrop(*args))
 
 if __name__ == '__main__':
     import torch
