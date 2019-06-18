@@ -8,6 +8,7 @@ Changes include
 + Note: QRNN is not tested and may not run.
 
 Reference paper for the temporal regularization property of the low pass filtering cells:
+
 [A neuromorphic boost to RNNs using low pass filters](https://arxiv.org/abs/1905.10692)
 The following is the original ReadMe.
 
