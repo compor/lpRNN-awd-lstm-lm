@@ -10,7 +10,7 @@ Changes include
 Reference paper for the temporal regularization property of the low pass filtering cells:
 
 [A neuromorphic boost to RNNs using low pass filters](https://arxiv.org/abs/1905.10692)
-For citations:
+If you use the code or find the paper useful, please use the following citation:
 ```
 @article{nair2019neuromorphic,
   title={A neuromorphic boost to RNNs using low pass filters},
