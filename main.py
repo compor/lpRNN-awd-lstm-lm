@@ -122,6 +122,8 @@ if __name__ == '__main__':
                         help='loation to dump results')
     parser.add_argument('--model', type=str, default='LSTM',
                         help='type of recurrent net (LSTM, QRNN, GRU, lpLSTM)')
+    parser.add_argument('--nl', type=str, default='tanh',
+                        help='type of non-linearity - tanh or relu')
     parser.add_argument('--ret_ratio', type=float, default=None,
                         help='Retention ratio to be used. None implies random.')
     parser.add_argument('--emsize', type=int, default=400,
@@ -220,7 +222,19 @@ if __name__ == '__main__':
     criterion = None
 
     ntokens = len(corpus.dictionary)
-    model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.dropouth, args.dropouti, args.dropoute, args.wdrop, args.tied, args.ret_ratio)
+    model = model.RNNModel(args.model, 
+                           ntokens, 
+                           args.emsize, 
+                           args.nhid, 
+                           args.nlayers, 
+                           args.dropout, 
+                           args.dropouth, 
+                           args.dropouti, 
+                           args.dropoute, 
+                           args.wdrop, 
+                           args.tied, 
+                           args.ret_ratio, 
+                           args.nl)
     ###
     if args.resume:
         print('Resuming model ...')

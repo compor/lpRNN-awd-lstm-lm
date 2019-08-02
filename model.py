@@ -26,7 +26,7 @@ class RNNModel(nn.Module):
                 self.rnns = [WeightDrop(rnn, ['weight_hh_l0'], dropout=wdrop) for rnn in self.rnns]
         elif rnn_type == 'lpLSTM':
             from lpLSTM import lpLSTM
-            self.rnns = [lpLSTM(ninp if l == 0 else nhid, nhid if l != nlayers - 1 else ninp, 1, dropout=0, set_retention_ratio=ret_ratio) for l in range(nlayers)]
+            self.rnns = [lpLSTM(ninp if l == 0 else nhid, nhid if l != nlayers - 1 else ninp, 1, dropout=0, set_retention_ratio=ret_ratio, activation=args.nl) for l in range(nlayers)]
             if wdrop:
                 self.rnns = [WeightDrop(rnn, ['weight_hh'], dropout=wdrop) for rnn in self.rnns]
         elif rnn_type == 'QRNN':
