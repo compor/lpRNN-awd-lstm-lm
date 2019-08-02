@@ -8,7 +8,20 @@ from weight_drop import WeightDrop
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
-    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, dropouth=0.5, dropouti=0.5, dropoute=0.1, wdrop=0, tie_weights=False, ret_ratio=0, non_linearity='tanh'):
+    def __init__(self, 
+                  rnn_type, 
+                  ntoken, 
+                  ninp, 
+                  nhid, 
+                  nlayers, 
+                  dropout=0.5, 
+                  dropouth=0.5, 
+                  dropouti=0.5, 
+                  dropoute=0.1, 
+                  wdrop=0, 
+                  tie_weights=False, 
+                  ret_ratio=0, 
+                  non_linearity='tanh'):
         super(RNNModel, self).__init__()
         self.lockdrop = LockedDropout()
         self.idrop = nn.Dropout(dropouti)

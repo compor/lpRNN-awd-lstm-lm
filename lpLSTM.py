@@ -82,7 +82,8 @@ class lpLSTM(nn.Module):
         cy = (forgetgate * cx) + (ingate * cellgate)
         hy = outgate * self.activation(cy)
         # Filtering 
-        hy = self.retention_ratio * hx + (1-self.retention_ratio) * hy
+        # hy = self.retention_ratio * hx + (1-self.retention_ratio) * hy
+        hy = self.retention_ratio * hx + hy
         # Dropout
         if self.dropout > 0.0:
             F.dropout(hy, p=self.dropout, training=self.training, inplace=True) 
