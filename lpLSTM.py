@@ -17,7 +17,7 @@ class lpLSTM(nn.Module):
     retention_ratio: for low pass filtering the RNN
     """
     def __init__(self, input_size, hidden_size, bias=True, dropout=0.0, wdropout=0.0
-                    ,activation='tanh', train_ret_ratio=False, set_retention_ratio=0):
+                    ,activation='tanh', train_ret_ratio=False, set_retention_ratio=None):
         # super(lpLSTMCell, self).__init__(mode='LSTM', input_size=input_size, hidden_size=hidden_size)
         super(lpLSTM, self).__init__()
         self.input_size    = input_size
@@ -43,8 +43,8 @@ class lpLSTM(nn.Module):
         else:
            self.activation = th.relu
         # Train low pass filtering factor
-        if set_retention_ratio:
-            self.retention_ratio = nn.Parameter(th.ones(self.hidden_size)
+        if set_retention_ratio is not None:
+            self.retention_ratio = nn.Parameter(set_retention_ratio * th.ones(self.hidden_size)
                                                 ,requires_grad=self.train_ret_ratio)
         else:
             self.retention_ratio = nn.Parameter(th.FloatTensor(self.hidden_size).uniform_(0.001, 1)
