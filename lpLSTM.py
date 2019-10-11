@@ -79,7 +79,8 @@ class lpLSTM(nn.Module):
         cellgate = self.activation(cellgate)
         outgate = th.sigmoid(outgate)
 
-        cy = (forgetgate * cx) + (ingate * cellgate)
+        cy = (self.retention_ratio * forgetgate * cx) + (ingate * cellgate)
+        # cy = (forgetgate * cx) + (ingate * cellgate)
         hy = outgate * self.activation(cy)
         # Filtering 
         # hy = self.retention_ratio * hx + (1-self.retention_ratio) * hy
