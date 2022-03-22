@@ -1,0 +1,73 @@
+./PTB.pt
+Loading cached dataset...
+Applying weight drop of 0.1 to weight_hh_l0
+Applying weight drop of 0.1 to weight_hh_l0
+Applying weight drop of 0.1 to weight_hh_l0
+Applying weight drop of 0.1 to weight_hh_l0
+Using []
+Putting model into cuda
+Args: Namespace(alpha=2, batch_size=20, beta=1, bptt=70, clip=0.2, cuda=True, data='./data/penn', dropout=0.4, dropoute=0.1, dropouth=0.3, dropouti=0.4, emsize=400, epochs=1, log_interval=200, lr=30, model='GRU', nhid=1550, nl='tanh', nlayers=4, nonmono=5, optimizer='sgd', resume='', ret_ratio=None, save='./PTB.pt', savepath='.', seed=9001, tied=True, wdecay=1.2e-06, wdrop=0.1, when=[-1])
+Model total parameters: 66380300
+Model trainable parameters: 66380300
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+RNNModel(
+  (lockdrop): LockedDropout()
+  (idrop): Dropout(p=0.4, inplace=False)
+  (hdrop): Dropout(p=0.3, inplace=False)
+  (drop): Dropout(p=0.4, inplace=False)
+  (encoder): Embedding(10000, 400)
+  (rnns): ModuleList(
+    (0): WeightDrop(
+      (module): GRU(400, 1550)
+      (wdrop): BackHook()
+    )
+    (1): WeightDrop(
+      (module): GRU(1550, 1550)
+      (wdrop): BackHook()
+    )
+    (2): WeightDrop(
+      (module): GRU(1550, 1550)
+      (wdrop): BackHook()
+    )
+    (3): WeightDrop(
+      (module): GRU(1550, 400)
+      (wdrop): BackHook()
+    )
+  )
+  (decoder): Linear(in_features=1550, out_features=10000, bias=True)
+)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/home/vasich/miniconda3/envs/sdh_lstm_alt_prof/lib/python3.6/site-packages/torch/nn/modules/module.py:1025: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
+  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "
+| epoch   1 |   200/  663 batches | lr 30.00000 | ms/batch 1905.68 | loss 10.99 | ppl 59442.58 | bpc   15.859
+| epoch   1 |   400/  663 batches | lr 30.00000 | ms/batch 1926.30 | loss  8.70 | ppl  5975.56 | bpc   12.545
+| epoch   1 |   600/  663 batches | lr 30.00000 | ms/batch 2238.42 | loss  8.57 | ppl  5258.37 | bpc   12.360
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                            aten::zeros         0.01%     254.000us         0.05%       1.277ms      85.133us       0.000us         0.00%       3.041ms     202.733us            15  
+                                            aten::empty         0.05%       1.359ms         0.05%       1.359ms      14.772us       0.000us         0.00%       0.000us       0.000us            92  
+                                            aten::zero_         0.02%     559.000us         0.09%       2.319ms      56.561us       0.000us         0.00%      38.125ms     929.878us            41  
+                                          ProfilerStep*         1.14%      30.778ms         2.14%      57.645ms      28.823ms       0.000us         0.00%     906.249ms     453.125ms             2  
+void GRU_elementWise_fp<float, float, float, (cudnnR...         0.00%       0.000us         0.00%       0.000us       0.000us      47.015ms         1.19%      47.015ms     130.961us           359  
+                                      sgemm_32x32x32_NN         0.00%       0.000us         0.00%       0.000us       0.000us        2.528s        63.84%        2.528s       7.435ms           340  
+                                            aten::slice         0.01%     176.000us         0.01%     234.000us      16.714us       0.000us         0.00%       0.000us       0.000us            14  
+                                       aten::as_strided         0.02%     440.000us         0.02%     440.000us       4.037us       0.000us         0.00%       0.000us       0.000us           109  
+                                             aten::view         0.00%      97.000us         0.00%      97.000us       9.700us       0.000us         0.00%       0.000us       0.000us            10  
+                                           aten::detach         0.01%     258.000us         0.02%     650.000us      12.264us       0.000us         0.00%       0.000us       0.000us            53  
+                                                 detach         0.01%     392.000us         0.01%     392.000us       7.396us       0.000us         0.00%       0.000us       0.000us            53  
+                      Optimizer.zero_grad#SGD.zero_grad         0.02%     464.000us         0.06%       1.741ms       1.741ms       0.000us         0.00%      35.076ms      35.076ms             1  
+                                            aten::fill_         0.03%     928.000us         0.08%       2.080ms      49.524us      38.186ms         0.96%      38.186ms     909.190us            42  
+                                       cudaLaunchKernel         0.45%      12.051ms         0.45%      12.051ms      22.824us       0.000us         0.00%       0.000us       0.000us           528  
+                                          aten::resize_         0.01%     166.000us         0.01%     166.000us       8.300us       0.000us         0.00%       0.000us       0.000us            20  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 2.693s
+Self CUDA time total: 3.960s
+
+-----------------------------------------------------------------------------------------
+| end of epoch   1 | time: 1494.62s | valid loss 12.78 | valid ppl 353381.97 | valid bpc   18.431
+-----------------------------------------------------------------------------------------
+Saving model (new best validation)
+=========================================================================================
+| End of training | test loss 12.84 | test ppl 375494.36 | test bpc   18.518
+=========================================================================================
