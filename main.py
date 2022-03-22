@@ -156,7 +156,7 @@ if __name__ == '__main__':
                         help='random seed')
     parser.add_argument('--nonmono', type=int, default=5,
                         help='random seed')
-    parser.add_argument('--cuda', action='store_false',
+    parser.add_argument('--cuda', action='store_true',
                         help='use CUDA')
     parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                         help='report interval')
