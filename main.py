@@ -13,6 +13,10 @@ from tensorboardX import SummaryWriter
 import os
 import hashlib
 import datetime
+
+from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import schedule
+
 ###############################################################################
 # Data loading code
 ###############################################################################
@@ -53,55 +57,60 @@ def train():
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(args.batch_size)
     batch, i = 0, 0
-    while i < train_data.size(0) - 1 - 1:
-        bptt = args.bptt if np.random.random() < 0.95 else args.bptt / 2.
-        # Prevent excessively small or negative sequence lengths
-        seq_len = max(5, int(np.random.normal(bptt, 5)))
-        # There's a very small chance that it could select a very long sequence length resulting in OOM
-        # seq_len = min(seq_len, args.bptt + 10)
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=False, schedule=schedule(wait=1, warmup=1, active=3)) as prof:
+        with record_function("training"):
+            while i < train_data.size(0) - 1 - 1:
+                bptt = args.bptt if np.random.random() < 0.95 else args.bptt / 2.
+                # Prevent excessively small or negative sequence lengths
+                seq_len = max(5, int(np.random.normal(bptt, 5)))
+                # There's a very small chance that it could select a very long sequence length resulting in OOM
+                # seq_len = min(seq_len, args.bptt + 10)
 
-        lr2 = optimizer.param_groups[0]['lr']
-        optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
-        model.train()
-        data, targets = get_batch(train_data, i, args, seq_len=seq_len)
+                lr2 = optimizer.param_groups[0]['lr']
+                optimizer.param_groups[0]['lr'] = lr2 * seq_len / args.bptt
+                model.train()
+                data, targets = get_batch(train_data, i, args, seq_len=seq_len)
 
-        # Starting each batch, we detach the hidden state from how it was previously produced.
-        # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        hidden = repackage_hidden(hidden)
-        # hidden = nn.Parameter(hidden)
+                # Starting each batch, we detach the hidden state from how it was previously produced.
+                # If we didn't, the model would try backpropagating all the way to start of the dataset.
+                hidden = repackage_hidden(hidden)
+                # hidden = nn.Parameter(hidden)
 
-        optimizer.zero_grad()
-        output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
-        raw_loss = criterion(model.decoder.weight, model.decoder.bias, output, targets)
+                optimizer.zero_grad()
+                output, hidden, rnn_hs, dropped_rnn_hs = model(data, hidden, return_h=True)
+                raw_loss = criterion(model.decoder.weight, model.decoder.bias, output, targets)
 
-        loss = raw_loss
-        # Activation Regularization
-        if args.alpha: loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
-        # Temporal Activation Regularization (slowness)
-        if args.beta: loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
-        loss.backward()
+                loss = raw_loss
+                # Activation Regularization
+                if args.alpha: loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
+                # Temporal Activation Regularization (slowness)
+                if args.beta: loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
+                loss.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        if args.clip: torch.nn.utils.clip_grad_norm_(params, args.clip)
-        optimizer.step()
+                # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+                if args.clip: torch.nn.utils.clip_grad_norm_(params, args.clip)
+                optimizer.step()
 
-        total_loss += raw_loss.data
-        optimizer.param_groups[0]['lr'] = lr2
-        if batch % args.log_interval == 0 and batch > 0:
-            cur_loss = total_loss.item() / args.log_interval
-            elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:05.5f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
-                epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
-            writer.add_scalar('Train loss', cur_loss, epoch)                
-            writer.add_scalar('Train ppl', math.exp(cur_loss), epoch)                
-            writer.add_scalar('Train bpc', cur_loss/math.log(2), epoch) 
-            total_loss = 0
-            start_time = time.time()
-        ###
-        batch += 1
-        i += seq_len
+                total_loss += raw_loss.data
+                optimizer.param_groups[0]['lr'] = lr2
+                if batch % args.log_interval == 0 and batch > 0:
+                    cur_loss = total_loss.item() / args.log_interval
+                    elapsed = time.time() - start_time
+                    print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:05.5f} | ms/batch {:5.2f} | '
+                            'loss {:5.2f} | ppl {:8.2f} | bpc {:8.3f}'.format(
+                        epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
+                        elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss), cur_loss / math.log(2)))
+                    writer.add_scalar('Train loss', cur_loss, epoch)                
+                    writer.add_scalar('Train ppl', math.exp(cur_loss), epoch)                
+                    writer.add_scalar('Train bpc', cur_loss/math.log(2), epoch) 
+                    total_loss = 0
+                    start_time = time.time()
+                ###
+                batch += 1
+                i += seq_len
+                prof.step()
+
+    print(prof.key_averages().table(row_limit=15))
 
 def dump_graph():
     dummy_input, _ = get_batch(train_data, 0, args, seq_len=1)
